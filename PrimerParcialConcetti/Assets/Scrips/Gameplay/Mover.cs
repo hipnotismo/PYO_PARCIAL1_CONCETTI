@@ -79,6 +79,38 @@ public class Mover
         Speed++;
     }
 
+    public void StoreCharacterPosition(int turn)
+    {
+        positions[turn - 1] = currentPlayerPosition;
+    }
+
+    public void UpdateCharacterPosition(int turn)
+    {
+        currentPlayerPosition = positions[turn - 1];
+        Speed = 0;
+    }
+
+    public void MoveEnemyRandomly()
+    {
+        int randomDirection = Random.Range(0, 4);
+
+        switch (randomDirection)
+        {
+            case 0:
+                MoveCharacterRight();
+                break;
+            case 1:
+                MoveCharacterLeft();
+                break;
+            case 2:
+                MoveCharacterUp();
+                break;
+            case 3:
+                MoveCharacterDown();
+                break;
+        }
+    }
+
     private bool IsValidPosition(int x, int y)
     {
         return PositionExistsInMap(x, y) && ThereIsNoCharacterInPosition(x, y);
