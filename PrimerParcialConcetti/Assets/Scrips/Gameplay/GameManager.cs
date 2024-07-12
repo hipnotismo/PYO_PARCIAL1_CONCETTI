@@ -5,7 +5,8 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private List<Player> players;
-    private List<Player> playerTurn;
+    [SerializeField] private ActionManager actionManager;
+
     private Player currentPlayer;
 
     private bool[] playerDeadFlags;
@@ -19,10 +20,20 @@ public class GameManager : MonoBehaviour
     private int maxTurns = 0;
 
     private Mover mover;
+
+    private bool gameOver = false;
+
     [SerializeField] private GameView gameView;
 
     public bool IsWaitingForMovement { set; get; }
 
+    private void OnEnable()
+    {
+        for (int i = 0; i < players.Count; i++)
+        {
+            players[i].onDead += KillCounter;
+        }
+    }
 
     void Start()
     {
@@ -30,6 +41,9 @@ public class GameManager : MonoBehaviour
 
         gameView.SetCurrentPlayer(currentPlayer.gameObject);
         gameView.SetPlayers(players.ConvertAll(p => p.gameObject));
+
+        actionManager.Initialize(players);
+        actionManager.SetCurrentPlayer(currentPlayer);
 
         maxTurns = players.Count;
 
@@ -55,7 +69,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (!IsWaitingForMovement) return;
+        if (!IsWaitingForMovement || gameOver) return;
 
         if (currentPlayer.Enemy)
         {
@@ -78,6 +92,7 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator PlayerTurn()
     {
+        if (gameOver) yield break;
 
         bool currentPlayerIsDead = IsPlayerDead(turn);
 
@@ -88,12 +103,12 @@ public class GameManager : MonoBehaviour
             mover.UpdateCharacterPosition(turn);
 
             yield return WaitForMovement();
-          //  yield return WaitForAction();
+            yield return WaitForAction();
 
             mover.StoreCharacterPosition(turn);
         }
 
-     //   CheckIfGameOver();
+        CheckIfGameOver();
         turn = (turn % maxTurns) + 1;
 
         StartCoroutine(PlayerTurn());
@@ -109,7 +124,7 @@ public class GameManager : MonoBehaviour
         currentPlayer = players[turn - 1];
 
         gameView.SetCurrentPlayer(currentPlayer.gameObject);
-       // actionController.SetCurrentPlayer(currentPlayer);
+        actionManager.SetCurrentPlayer(currentPlayer);
     }
 
     private IEnumerator WaitForMovement()
@@ -124,4 +139,58 @@ public class GameManager : MonoBehaviour
         IsWaitingForMovement = false;
     }
 
+    private IEnumerator WaitForAction()
+    {
+        while (!actionManager.HasChosenAction)
+        {
+            yield return new WaitForEndOfFrame();
+        }
+    }
+
+    private void CheckIfGameOver()
+    {
+        if (playerCounter == 1)
+        {
+            Debug.Log("PLAYER " + turn + " WINS!!!");
+
+            gameOver = true;
+
+            actionManager.gameObject.SetActive(false);
+        }
+
+        else if (playerCounter < playersTotal && enemiesCounter > 0)
+        {
+            
+            Debug.Log("EVERYBODY LOSES!!!");
+
+            gameOver = true;
+
+            actionManager.gameObject.SetActive(false);
+        }
+    }
+
+    private void KillCounter()
+    {
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (players[i].health == 0)
+            {               
+                Debug.Log("Player " + (i + 1) + " has died.");
+
+                playerDeadFlags[i] = true;
+
+                if (players[i].Enemy)
+                {
+                    enemiesCounter--;
+                }
+
+                else
+                {
+                    playerCounter--;
+                }
+
+                mover.RemovePositionAfterDeath(i, turn);
+            }
+        }
+    }
 }

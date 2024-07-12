@@ -90,6 +90,16 @@ public class Mover
         Speed = 0;
     }
 
+    public void RemovePositionAfterDeath(int index, int turn)
+    {
+        if (index == turn - 1)
+        {
+            positions[index] = currentPlayerPosition;
+        }
+
+        map[positions[index].y][positions[index].x] = TerrainType.GRASS;
+    }
+
     public void MoveEnemyRandomly()
     {
         int randomDirection = Random.Range(0, 4);
